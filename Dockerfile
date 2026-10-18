@@ -10,11 +10,9 @@
 #     -v "$HOME/.cache/tensorfold-qwen38-27b":/cache \
 #     qwen38-27b:v0.6.0
 #
-# First start on a new machine: the checkpoint cache must hold Vontra/Qwen3.8-27B-MLX-4bit (~15 GB) and, since the
-# server drafts by default, z-lab/Qwen3.8-27B-DFlash2 (~3.6 GB). Fill it once (or copy the cache from another box):
-#
-#   docker run --rm -e HF_HUB_OFFLINE=0 --entrypoint tensorfold \
-#     -v "$HOME/.cache/huggingface/hub":/root/.cache/huggingface qwen38-27b:v0.6.0 pull Vontra/Qwen3.8-27B-MLX-4bit
+# First start on a new machine: the entrypoint fills the checkpoint cache itself -- it pulls Vontra/
+# Qwen3.8-27B-MLX-4bit (~15 GB) and z-lab/Qwen3.8-27B-DFlash2 (~3.6 GB) into the mounted cache if missing, then serves.
+# No manual pull, no extra command. To skip drafts entirely: append --no-drafts (or -e TENSORFOLD_NO_DRAFTS=1).
 #
 # Changing a setting: every default below is overridable where it lives -- `-e` for the environment switches (e.g.
 # -e TENSORFOLD_KV_DTYPE=bf16), and a `tensorfold serve ...` command replaces the CMD entirely for the flags (e.g.
@@ -45,7 +43,11 @@ LABEL org.opencontainers.image.title="Qwen3.8-27B TensorFold (ready to serve)" \
       org.opencontainers.image.source="https://github.com/ball6847/Qwen3.8-27B-DGX-Spark-TensorFold" \
       org.opencontainers.image.version="v0.6.0"
 
-# What ./start.sh runs, as the image's own default (a `tensorfold serve ...` on the docker command line replaces it).
+# The entrypoint auto-fills the cache, then runs what ./start.sh runs as the image's own default. Extra flags after
+# the image name are appended to serve (last flag wins); a full `tensorfold serve ...` replaces the defaults.
+COPY --chmod=755 entrypoint.sh /usr/local/bin/tensorfold-entrypoint.sh
+
+ENTRYPOINT ["/opt/nvidia/nvidia_entrypoint.sh", "/usr/local/bin/tensorfold-entrypoint.sh"]
 CMD ["tensorfold", "serve", "Vontra/Qwen3.8-27B-MLX-4bit", \
      "--host", "0.0.0.0", "--port", "8888", \
      "--name", "Qwen3.8-27B", "--parallel", "8", "--context", "262144", \

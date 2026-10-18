@@ -2,3 +2,4 @@
 *
 !patches
 !patches/**
+!entrypoint.sh
