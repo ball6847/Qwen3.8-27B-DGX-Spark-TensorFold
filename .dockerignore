@@ -1,0 +1,4 @@
+# The image only needs ./patches; the Dockerfile itself is always sent.
+*
+!patches
+!patches/**
